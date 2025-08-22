@@ -13,6 +13,25 @@ interface State {
   logout: () => Promise<void>;
 }
 
+// add this small util near the top of the file (or in a utils file)
+async function retry<T>(fn: () => Promise<T>, tries = 4, baseDelayMs = 800): Promise<T> {
+  let lastErr: any;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      // Only retry on network / 5xx
+      const status = err?.response?.status;
+      const retriable = !status || status >= 500;
+      if (!retriable) break;
+      await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, i))); // 0.8s, 1.6s, 3.2s, 6.4s
+    }
+  }
+  throw lastErr;
+}
+
+
 export const useAuth = create<State>()((set, get) => ({
   user: null,
   loading: false,
