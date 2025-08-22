@@ -1,9 +1,11 @@
-// server/src/server.ts
 import 'dotenv/config';
-import express from 'express';
-import cors, { CorsOptions } from 'cors';
+import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+
+// Use require so cors is callable regardless of tsconfig interop flags
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const cors = require('cors') as (opts?: any) => import('express').RequestHandler;
 
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
@@ -20,11 +22,26 @@ const allow = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhos
   .map((s) => s.trim())
   .filter(Boolean);
 
-const corsOptions: CorsOptions = {
-  origin(origin, cb) {
-    if (!origin) return cb(null, true);
-    if (allow.includes(origin)) return cb(null, true);
-    cb(new Error(`Not allowed by CORS: ${origin}`));
+type OriginCb = (err: Error | null, allow?: boolean) => void;
+
+// Local type (avoids importing CorsOptions)
+type MyCorsOptions = {
+  origin?: boolean | string | RegExp | (string | RegExp)[]
+    | ((origin: string | undefined, cb: OriginCb) => void);
+  methods?: string | string[];
+  allowedHeaders?: string | string[];
+  exposedHeaders?: string | string[];
+  credentials?: boolean;
+  maxAge?: number;
+  preflightContinue?: boolean;
+  optionsSuccessStatus?: number;
+};
+
+const corsOptions: MyCorsOptions = {
+  origin(origin: string | undefined, cb: OriginCb) {
+    if (!origin) return cb(null, true);                // allow curl / mobile apps
+    if (allow.includes(origin)) return cb(null, true); // allowlisted origins
+    return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -33,7 +50,7 @@ const corsOptions: CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('*', cors(corsOptions)); // Preflight handler
 
 // ----- Parsers & logs -----
 app.use(cookieParser());
@@ -41,7 +58,7 @@ app.use(express.json({ limit: '1mb' }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 
 // ----- Health -----
-app.get('/api/v1/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/v1/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
 // ----- Routes -----
 app.use('/api/v1/auth', authRoutes);
@@ -50,19 +67,17 @@ app.use('/api/v1/lists', listsRoutes);
 app.use('/api/v1/cards', cardsRoutes);
 
 // ----- 404 -----
-app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
+app.use((_req: Request, res: Response) => res.status(404).json({ message: 'Not found' }));
 
 // ----- Error handler (no stack in prod) -----
-app.use(
-  (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const status = Number(err?.status || err?.statusCode) || 500;
-    const message =
-      status === 500 && process.env.NODE_ENV === 'production'
-        ? 'Internal Server Error'
-        : err?.message || 'Internal Server Error';
-    res.status(status).json({ message });
-  }
-);
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = Number(err?.status || err?.statusCode) || 500;
+  const message =
+    status === 500 && process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : (err?.message as string) || 'Internal Server Error';
+  res.status(status).json({ message });
+});
 
 // ----- Boot -----
 (async () => {
