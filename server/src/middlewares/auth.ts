@@ -1,36 +1,49 @@
+// server/src/middlewares/auth.ts
 import type { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
-type JWTPayload = { id?: string; sub?: string; email?: string; name?: string; iat?: number; exp?: number };
+export interface AuthUser {
+  id: string;
+  email?: string;
+  name?: string;
+}
+
 export interface AuthedRequest extends Request {
-  user?: { id: string; email?: string; name?: string };
+  user?: AuthUser;
 }
 
 function getToken(req: Request): string | undefined {
+  // requires cookie-parser middleware
   const cookieToken = (req as any).cookies?.token as string | undefined;
+
   const h = req.headers.authorization || '';
   const bearer = h.startsWith('Bearer ') ? h.slice(7) : undefined;
-  return cookieToken || bearer;
+
+  return cookieToken ?? bearer;
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+  const token = getToken(req);
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return res.status(500).json({ message: 'JWT secret not configured' });
+
   try {
-    const token = getToken(req);
-    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+    const decoded = jwt.verify(token, secret) as JwtPayload & {
+      id?: string;
+      sub?: string;
+      email?: string;
+      name?: string;
+    };
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) return res.status(500).json({ message: 'JWT secret not configured' });
-
-    const decoded = jwt.verify(token, secret) as JWTPayload;
     const id = decoded.id ?? decoded.sub;
-    if (!id) return res.status(401).json({ message: 'Invalid token payload' });
+    if (!id) return res.status(401).json({ message: 'Unauthorized' });
 
-    const user = { id, email: decoded.email, name: decoded.name };
-    (req as AuthedRequest).user = user;
-    (res.locals as any).user = user;
-    next();
+    req.user = { id, email: decoded.email, name: decoded.name };
+    return next();
   } catch {
-    res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 }
 
