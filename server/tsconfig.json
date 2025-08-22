@@ -1,16 +1,21 @@
 {
   "compilerOptions": {
     "target": "ES2021",
-    "module": "ESNext",
+    "module": "CommonJS",
     "moduleResolution": "Node",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "outDir": "dist",
     "rootDir": "src",
-    "types": [],
-    "typeRoots": ["./src/types", "./node_modules/@types"]
+    "outDir": "dist",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+
+    /* Optional but recommended if you install @types/node:
+    "types": ["node"]
+    */
   },
   "include": ["src/**/*.ts"]
 }
