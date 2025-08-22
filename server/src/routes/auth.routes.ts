@@ -5,7 +5,7 @@ import { requireAuth } from '../middlewares/auth';
 const router = Router();
 
 router.post('/login', login);
-router.post('/logout', requireAuth, logout);
-router.get('/me', requireAuth, me);
+router.post('/logout', logout);
+router.get('/me', requireAuth, me); // ✅ ensure /me is protected
 
 export default router;

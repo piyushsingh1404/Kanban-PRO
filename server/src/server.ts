@@ -11,30 +11,47 @@ import listRoutes from './routes/lists.routes';
 import cardRoutes from './routes/cards.routes';
 
 const app = express();
+
+// If you deploy behind a proxy/CDN (Render), this makes secure cookies & IPs behave correctly.
 app.set('trust proxy', 1);
 
-// CORS
-const allow: string[] = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:5174')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+/**
+ * --- CORS ---
+ * Allow your local dev ports and your Netlify site.
+ * You can extend this list via CORS_ORIGIN env (comma-separated).
+ */
+const defaults = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://splendid-douhua-4b8b7a.netlify.app', // your Netlify frontend
+];
+
+const allow: string[] = [
+  ...defaults,
+  ...(process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean),
+];
 
 const corsOptions: CorsOptions = {
-  origin(origin: string | undefined, callback) {
-    if (!origin) return callback(null, true);
-    if (allow.includes(origin)) return callback(null, true);
-    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  origin(origin, cb) {
+    // no Origin header (curl/postman) -> allow
+    if (!origin) return cb(null, true);
+    if (allow.includes(origin)) return cb(null, true);
+    return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
-  credentials: true,
+  credentials: true, // allow cookies
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
 
+// CORS must be registered BEFORE any routes
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Middleware
+// Common middleware
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
