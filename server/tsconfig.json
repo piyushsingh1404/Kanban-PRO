@@ -1,11 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "rootDir": "src",
-    "outDir": "dist",
+    "target": "ES2021",
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "esModuleInterop": true,
-    "strict": true
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": [],
+    "typeRoots": ["./src/types", "./node_modules/@types"]
   },
-  "include": ["src/**/*", "src/types/**/*.d.ts"]
+  "include": ["src/**/*.ts"]
 }

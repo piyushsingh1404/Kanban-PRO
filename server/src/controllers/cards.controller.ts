@@ -1,3 +1,4 @@
+// server/src/controllers/cards.controller.ts
 import type { Response } from 'express';
 import { AuthedRequest } from '../middlewares/auth';
 import Card from '../models/Card';
@@ -46,7 +47,10 @@ export async function removeCard(req: AuthedRequest, res: Response) {
 // PATCH /api/v1/cards/reorder -> { ok: true }
 export async function reorderCards(req: AuthedRequest, res: Response) {
   const ownerId = req.user?.id || req.userId!;
-  const { boardId, items } = req.body as { boardId: string; items: Array<{ cardId: string; listId: string; position: number }> };
+  const { boardId, items } = req.body as {
+    boardId: string;
+    items: Array<{ cardId: string; listId: string; position: number }>;
+  };
 
   const ops = items.map(({ cardId, listId, position }) =>
     Card.updateOne({ _id: cardId, ownerId, boardId }, { $set: { listId, position } })

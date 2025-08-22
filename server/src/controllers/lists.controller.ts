@@ -1,3 +1,4 @@
+// server/src/controllers/lists.controller.ts
 import type { Response } from 'express';
 import { AuthedRequest } from '../middlewares/auth';
 import List from '../models/List';

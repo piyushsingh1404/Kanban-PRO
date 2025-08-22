@@ -1,3 +1,4 @@
+// server/src/controllers/boards.controller.ts
 import type { Response } from 'express';
 import { AuthedRequest } from '../middlewares/auth';
 import Board from '../models/Board';
