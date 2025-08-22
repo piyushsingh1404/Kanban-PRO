@@ -1,20 +1,19 @@
+// client/src/services/api.ts
 import axios from 'axios';
 
-const base = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const base =
+  import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 console.log('API_BASE =', base);
 
 export const api = axios.create({
   baseURL: base,
-  withCredentials: true, // cookies
+  withCredentials: true, // send/receive cookies
 });
 
 api.interceptors.request.use((config) => {
   const t = localStorage.getItem('token');
   if (t) {
-    config.headers = {
-      ...(config.headers || {}),
-      Authorization: `Bearer ${t}`,
-    } as any;
+    config.headers = { ...(config.headers || {}), Authorization: `Bearer ${t}` } as any;
   }
   return config;
 });
