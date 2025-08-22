@@ -1,0 +1,12 @@
+[build]
+  # run inside the client folder
+  base    = "client"
+  command = "pnpm install --no-frozen-lockfile && pnpm run build"
+  # publish the Vite build output
+  publish = "dist"
+
+# (optional) keep SPA routes working
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
