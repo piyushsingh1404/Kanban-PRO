@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/auth';
-import { listBoards, getBoard, createBoard, updateBoard, deleteBoard } from '../controllers/boards.controller';
+import {
+  listBoards,
+  getBoard,
+  createBoard,
+  renameBoard,   // <-- PATCH handler
+  deleteBoard,
+} from '../controllers/boards.controller';
 
-const r = Router();
-r.get('/', requireAuth, listBoards);
-r.get('/:id', requireAuth, getBoard);      // ← add this
-r.post('/', requireAuth, createBoard);
-r.patch('/:id', requireAuth, updateBoard);
-r.delete('/:id', requireAuth, deleteBoard);
-export default r;
+const router = Router();
+
+router.get('/', requireAuth, listBoards);
+router.get('/:id', requireAuth, getBoard);
+router.post('/', requireAuth, createBoard);
+router.patch('/:id', requireAuth, renameBoard); // (was updateBoard)
+router.delete('/:id', requireAuth, deleteBoard);
+
+export default router;

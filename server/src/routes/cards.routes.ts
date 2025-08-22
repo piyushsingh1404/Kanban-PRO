@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/auth';
-import { cardsByBoard, createCard, renameCard, removeCard, reorderCards } from '../controllers/cards.controller';
+import {
+  getCardsByBoard,   // (was cardsByBoard)
+  createCard,
+  renameCard,
+  removeCard,
+  reorderCards,
+} from '../controllers/cards.controller';
 
-const r = Router();
-r.get('/board/:boardId', requireAuth, cardsByBoard);
-r.post('/', requireAuth, createCard);
-r.patch('/:id', requireAuth, renameCard);
-r.delete('/:id', requireAuth, removeCard);
-r.patch('/reorder', requireAuth, reorderCards);
-export default r;
+const router = Router();
+
+router.get('/board/:boardId', requireAuth, getCardsByBoard);
+router.post('/', requireAuth, createCard);
+router.patch('/:id', requireAuth, renameCard);
+router.delete('/:id', requireAuth, removeCard);
+router.patch('/reorder', requireAuth, reorderCards);
+
+export default router;
