@@ -1,45 +1,56 @@
-import { Request, Response } from "express";
-import mongoose from "mongoose";
-import Card from "../models/Card";
+import type { Response } from 'express';
+import { AuthedRequest } from '../middlewares/auth';
+import Card from '../models/Card';
 
-const isId = (id: unknown): id is string =>
-  typeof id === "string" && mongoose.Types.ObjectId.isValid(id);
-
-// GET /api/v1/cards/board/:boardId
-export async function cardsByBoard(req: Request, res: Response) {
-  const ownerId = req.userId || req.user?.id;
-  if (!ownerId) return res.status(401).json({ message: "Unauthorized" });
-
+// GET /api/v1/cards/board/:boardId -> { cards }
+export async function getCardsByBoard(req: AuthedRequest, res: Response) {
+  const ownerId = req.user?.id || req.userId!;
   const { boardId } = req.params;
-  if (!isId(boardId)) return res.status(400).json({ message: "Invalid board id" });
-
-  const cards = await Card.find({ boardId, ownerId })
-    .sort({ position: 1 })
-    .lean();
-
+  const cards = await Card.find({ boardId, ownerId }).sort({ position: 1 }).lean();
   res.json({ cards });
 }
 
-// POST /api/v1/cards
-export async function createCard(req: Request, res: Response) {
-  const ownerId = req.userId || req.user?.id;
-  if (!ownerId) return res.status(401).json({ message: "Unauthorized" });
-
+// POST /api/v1/cards -> { card }
+export async function createCard(req: AuthedRequest, res: Response) {
+  const ownerId = req.user?.id || req.userId!;
   const { boardId, listId, title, position } = req.body ?? {};
-  if (!isId(boardId) || !isId(listId)) {
-    return res.status(400).json({ message: "Invalid ids" });
-  }
-
-  const t = String(title ?? "").trim();
-  if (!t) return res.status(400).json({ message: "Title required" });
-
   const card = await Card.create({
-    ownerId,
     boardId,
     listId,
-    title: t,
+    title: String(title || '').trim(),
     position: Number(position) || 1000,
+    ownerId,
   });
+  res.status(201).json({ card: card.toObject() });
+}
 
-  res.status(201).json({ card });
+// PATCH /api/v1/cards/:id -> { card }
+export async function renameCard(req: AuthedRequest, res: Response) {
+  const ownerId = req.user?.id || req.userId!;
+  const { id } = req.params;
+  const title = String(req.body?.title || '').trim();
+  const card = await Card.findOneAndUpdate({ _id: id, ownerId }, { $set: { title } }, { new: true }).lean();
+  if (!card) return res.status(404).json({ message: 'Card not found' });
+  res.json({ card });
+}
+
+// DELETE /api/v1/cards/:id -> { ok: true }
+export async function removeCard(req: AuthedRequest, res: Response) {
+  const ownerId = req.user?.id || req.userId!;
+  const { id } = req.params;
+  const ok = await Card.findOneAndDelete({ _id: id, ownerId }).lean();
+  if (!ok) return res.status(404).json({ message: 'Card not found' });
+  res.json({ ok: true });
+}
+
+// PATCH /api/v1/cards/reorder -> { ok: true }
+export async function reorderCards(req: AuthedRequest, res: Response) {
+  const ownerId = req.user?.id || req.userId!;
+  const { boardId, items } = req.body as { boardId: string; items: Array<{ cardId: string; listId: string; position: number }> };
+
+  const ops = items.map(({ cardId, listId, position }) =>
+    Card.updateOne({ _id: cardId, ownerId, boardId }, { $set: { listId, position } })
+  );
+  await Promise.all(ops);
+  res.json({ ok: true });
 }
