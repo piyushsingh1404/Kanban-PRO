@@ -1,50 +1,25 @@
-// server/src/middlewares/auth.ts
-import type { Request, Response, NextFunction } from 'express';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 
-export interface AuthUser {
-  id: string;
-  email?: string;
-  name?: string;
-}
-
-export interface AuthedRequest extends Request {
-  user?: AuthUser;
-}
-
-function getToken(req: Request): string | undefined {
-  // requires cookie-parser middleware
-  const cookieToken = (req as any).cookies?.token as string | undefined;
-
-  const h = req.headers.authorization || '';
-  const bearer = h.startsWith('Bearer ') ? h.slice(7) : undefined;
-
-  return cookieToken ?? bearer;
-}
-
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
-  const token = getToken(req);
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
-  const secret = process.env.JWT_SECRET;
-  if (!secret) return res.status(500).json({ message: 'JWT secret not configured' });
-
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    const decoded = jwt.verify(token, secret) as JwtPayload & {
-      id?: string;
-      sub?: string;
+    const bearer = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined;
+
+    const token = req.cookies?.token || bearer;
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      id: string;
       email?: string;
       name?: string;
     };
 
-    const id = decoded.id ?? decoded.sub;
-    if (!id) return res.status(401).json({ message: 'Unauthorized' });
-
-    req.user = { id, email: decoded.email, name: decoded.name };
-    return next();
+    req.userId = payload.id;                         // <- globally typed
+    req.user = { id: payload.id, email: payload.email, name: payload.name };
+    next();
   } catch {
-    return res.status(401).json({ message: 'Unauthorized' });
+    res.status(401).json({ message: "Unauthorized" });
   }
 }
-
-export default requireAuth;
