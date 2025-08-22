@@ -1,0 +1,7 @@
+{
+  "name": "kanban-pro-monorepo",
+  "private": true,
+  "workspaces": ["server","client"],
+  "devDependencies": { "concurrently": "9.2.0" },
+  "scripts": { "dev": "concurrently -k -n server,client -c green,cyan \"pnpm -C server dev\" \"pnpm -C client dev\"" }
+}
