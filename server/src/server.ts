@@ -15,6 +15,8 @@ import cardsRoutes from './routes/cards.routes';
 
 const app = express();
 app.set('trust proxy', 1);
+app.get('/', (_req, res) => res.status(200).send('OK'));
+app.get('/api/v1/health', (_req, res) => res.status(200).json({ ok: true }));
 
 // ----- CORS (allow Netlify / local) -----
 // ----- CORS (allow Netlify / local) -----
