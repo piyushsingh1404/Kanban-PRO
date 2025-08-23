@@ -102,7 +102,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ----- Boot -----
-const port = Number(process.env.PORT) || 8080;
+const port = Number(process.env.PORT) || 8081;
 const server = app.listen(port, () => console.log(`[BOOT] API on :${port}`));
 
 // Handle port conflict (EADDRINUSE)
