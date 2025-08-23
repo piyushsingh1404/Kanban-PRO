@@ -1,6 +1,7 @@
 // server/src/config/db.ts
 import mongoose from 'mongoose';
 
+// server/src/config/db.ts
 export async function connectDB() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
@@ -12,11 +13,12 @@ export async function connectDB() {
     console.log('[DB] connecting…');
     await mongoose.connect(uri, {
       dbName: process.env.MONGODB_DB || undefined,
-      serverSelectionTimeoutMS: 5000, // avoid hanging startup
+      serverSelectionTimeoutMS: 10000, // Increased timeout
     } as any);
     console.log('[DB] connected');
   } catch (err) {
     console.error('[DB] connection failed:', (err as Error).message);
-    // do NOT throw — keep API up so health checks pass
+    // Don't throw: keep API alive for health checks
   }
 }
+
