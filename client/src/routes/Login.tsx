@@ -13,9 +13,13 @@ export default function Login() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      // Log the user in
       await login(email, password);
+      // Save the JWT token in localStorage
+      localStorage.setItem('auth_token', 'your_jwt_token_here');
+
       toast.success('Welcome back!');
-      nav('/boards', { replace: true }); // ✅ soft navigation (no reload)
+      nav('/boards', { replace: true });
     } catch (e: any) {
       toast.error(e?.response?.data?.message || e.message || 'Login failed');
     }
