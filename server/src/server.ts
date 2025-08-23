@@ -105,16 +105,19 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ----- Boot -----
-(async () => {
-  try {
-    console.log('[BOOT] starting…');
-    await connectDB();
-    const port = Number(process.env.PORT) || 8080;
-    app.listen(port, () => console.log(`[BOOT] API on :${port}`));
-  } catch (e) {
-    console.error('[BOOT] fatal:', e);
+const port = Number(process.env.PORT) || 8080;
+const server = app.listen(port, () => console.log(`[BOOT] API on :${port}`));
+
+server.on('error', (err: any) => {
+  if (err?.code === 'EADDRINUSE') {
+    console.error(`[BOOT] Port ${port} in use. Set PORT or stop the other process.`);
     process.exit(1);
   }
-})();
+  console.error('[BOOT] server error:', err);
+  process.exit(1);
+});
+
+// Connect to DB in background; don't block health checks
+connectDB().catch((e) => console.error('[DB] unexpected error:', e));
 
 export default app;
