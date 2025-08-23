@@ -103,7 +103,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ----- Boot -----
-const port = process.env.PORT || 8080; // Dynamically use Render's assigned port
+const port = Number(process.env.PORT) || 8080;  // Ensure the port is a number
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`[BOOT] API on :${port}`);
 });
