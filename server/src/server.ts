@@ -1,13 +1,11 @@
-// In server/src/server.ts
-
 import 'dotenv/config';
-import express, { Request, Response, NextFunction, RequestHandler } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 
-// ✅ single declaration — callable even without esModuleInterop
-const cors: (opts?: any) => RequestHandler = require('cors');
+// Correct import of CORS
+import cors from 'cors';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -98,11 +96,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     status === 500 && process.env.NODE_ENV === 'production'
       ? 'Internal Server Error'
       : err?.message || 'Internal Server Error';
+  console.error('[ERROR]', message);  // Log the error message
   res.status(status).json({ message });
 });
 
 // ----- Boot -----
-const port = Number(process.env.PORT) || 8081;
+const port = Number(process.env.PORT) || 8080;
 const server = app.listen(port, () => console.log(`[BOOT] API on :${port}`));
 
 // Handle port conflict (EADDRINUSE)
@@ -120,15 +119,14 @@ const connectDB = async () => {
   try {
     console.log('[DB] connecting…');
     const uri = process.env.MONGODB_URI;
-    if (uri) {
-      await mongoose.connect(uri);
-      console.log('[DB] connected');
-    } else {
-      console.error('[DB] MONGODB_URI not provided');
+    if (!uri) {
+      console.error('[DB] MONGODB_URI not set');
+      return;
     }
+    await mongoose.connect(uri);
+    console.log('[DB] connected');
   } catch (error) {
-    console.error('[DB] Error while connecting:', error);
-    // Don't block health checks or server startup
+    console.error('[DB] MongoDB connection failed:', error);
   }
 };
 
