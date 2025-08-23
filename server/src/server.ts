@@ -17,9 +17,11 @@ import cardsRoutes from './routes/cards.routes';
 const app = express();
 app.set('trust proxy', 1);
 
-// Health check route (always returns 200 OK to prevent Render loop)
-app.get('/', (_req, res) => res.status(200).send('OK'));
-app.get('/api/v1/health', (_req, res) => res.status(200).json({ ok: true }));
+// Health check route (Render will check this route)
+app.get('/', (_req, res) => {
+  console.log('[Health Check] Responding...');
+  res.status(200).json({ ok: true });
+});
 
 // ----- CORS (allow Netlify / local) -----
 const RAW = process.env.CORS_ORIGIN ?? '';
@@ -101,8 +103,10 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // ----- Boot -----
-const port = Number(process.env.PORT) || 8080;
-const server = app.listen(port, () => console.log(`[BOOT] API on :${port}`));
+const port = process.env.PORT || 8080; // Dynamically use Render's assigned port
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`[BOOT] API on :${port}`);
+});
 
 // Handle port conflict (EADDRINUSE)
 server.on('error', (err: any) => {
@@ -117,13 +121,15 @@ server.on('error', (err: any) => {
 // ----- Connect to DB (background) -----
 const connectDB = async () => {
   try {
-    console.log('[DB] connecting…');
+    console.log('[DB] connecting...');
     const uri = process.env.MONGODB_URI;
     if (!uri) {
       console.error('[DB] MONGODB_URI not set');
       return;
     }
-    await mongoose.connect(uri);
+
+    // Use mongoose connection with timeouts to avoid blocking the server startup
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });  // 5 seconds timeout
     console.log('[DB] connected');
   } catch (error) {
     console.error('[DB] MongoDB connection failed:', error);
