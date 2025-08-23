@@ -1,11 +1,11 @@
 import 'dotenv/config';
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 
-// Use require so cors is callable regardless of tsconfig interop flags
+// ✅ single declaration — callable even without esModuleInterop
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const cors = require('cors') as (opts?: any) => import('express').RequestHandler;
+const cors: (opts?: any) => RequestHandler = require('cors');
 
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
@@ -18,17 +18,17 @@ app.set('trust proxy', 1);
 
 // ----- CORS (allow Netlify / local) -----
 // ----- CORS (allow Netlify / local) -----
-const RAW = process.env.CORS_ORIGIN ?? '';
-const allow: string[] = RAW.split(',').map(s => s.trim()).filter(Boolean);
+// ----- CORS (allow Netlify / local) -----
+const RAW = process.env.CORS_ORIGIN ?? "";
+const allow: string[] = RAW.split(",").map(s => s.trim()).filter(Boolean);
 
-// ensure locals are allowed (avoid dupes)
-for (const o of ['http://localhost:5173', 'http://localhost:5174']) {
+// Always include local dev origins (avoid dupes)
+for (const o of ["http://localhost:5173","http://localhost:5174"]) {
   if (!allow.includes(o)) allow.push(o);
 }
 
 type OriginCb = (err: Error | null, allow?: boolean) => void;
 
-// local type (avoids @types/cors import hassles)
 type MyCorsOptions = {
   origin?: boolean | string | RegExp | (string | RegExp)[]
     | ((origin: string | undefined, cb: OriginCb) => void);
@@ -38,36 +38,41 @@ type MyCorsOptions = {
   optionsSuccessStatus?: number;
 };
 
-const debug = process.env.CORS_DEBUG === '1';
+const debug = process.env.CORS_DEBUG === "1";
 
-// supports rules like "*.netlify.app"
+// supports entries like "*.netlify.app"
 function matchesOrigin(origin: string): boolean {
   if (allow.includes(origin)) return true;
   for (const rule of allow) {
-    if (rule.startsWith('*.') && origin.endsWith(rule.slice(1))) return true;
+    if (rule.startsWith("*.")) {
+      const suffix = rule.slice(1); // ".netlify.app"
+      if (origin.endsWith(suffix)) return true;
+    }
   }
   return false;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cors = require('cors') as (opts?: any) => import('express').RequestHandler;
-
 const corsOptions: MyCorsOptions = {
   origin(origin: string | undefined, cb: OriginCb) {
-    if (!origin) return cb(null, true); // curl/native apps
+    if (!origin) {
+      if (debug) console.log("[CORS] <no origin> -> ALLOW");
+      return cb(null, true); // curl/native apps
+    }
     const ok = matchesOrigin(origin);
-    if (debug) console.log(`[CORS] ${origin} -> ${ok ? 'ALLOW' : 'BLOCK'}`);
-    // IMPORTANT: do NOT throw. Return false to omit CORS headers.
+    if (debug) console.log(`[CORS] ${origin} -> ${ok ? "ALLOW" : "BLOCK"}`);
+    // IMPORTANT: never throw — false omits CORS headers (browser blocks) instead of 500
     return cb(null, ok);
   },
   credentials: true,
-  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','Cache-Control'],
+  methods: ["GET","HEAD","PUT","PATCH","POST","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization","Cache-Control"],
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // preflight
+app.options("*", cors(corsOptions));
+
+
 
 
 // ----- Parsers & logs -----
