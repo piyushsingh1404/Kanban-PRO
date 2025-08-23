@@ -3,19 +3,12 @@
     "target": "ES2021",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "rootDir": "src",
-    "outDir": "dist",
-
-    "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-
-    /* Optional but recommended if you install @types/node:
-    "types": ["node"]
-    */
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

@@ -5,8 +5,8 @@ import { optionalAuth, requireAuth } from '../middlewares/auth';
 
 const r = Router();
 
-r.post('/register', register);
-r.post('/login', login);
+r.post('/register', register);  // Registration placeholder
+r.post('/login', login);  // Login route
 
 // /me should never 500; we first try to parse token (optional), then requireAuth if present.
 r.get(
@@ -17,6 +17,6 @@ r.get(
   me
 );
 
-r.post('/logout', logout);
+r.post('/logout', logout);  // Logout route
 
 export default r;

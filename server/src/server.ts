@@ -3,9 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
-
-// Correct import of CORS
-import cors from 'cors';
+import cors from 'cors';  // Correct import of CORS
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -23,7 +21,7 @@ app.get('/', (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
-// ----- CORS (allow Netlify / local) -----
+// CORS setup
 const RAW = process.env.CORS_ORIGIN ?? '';
 const allow: string[] = RAW.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -35,8 +33,7 @@ for (const o of ['http://localhost:5173', 'http://localhost:5174']) {
 type OriginCb = (err: Error | null, allow?: boolean) => void;
 
 type MyCorsOptions = {
-  origin?: boolean | string | RegExp | (string | RegExp)[]
-    | ((origin: string | undefined, cb: OriginCb) => void);
+  origin?: boolean | string | RegExp | (string | RegExp)[] | ((origin: string | undefined, cb: OriginCb) => void);
   methods?: string | string[];
   allowedHeaders?: string | string[];
   credentials?: boolean;
@@ -65,7 +62,6 @@ const corsOptions: MyCorsOptions = {
     }
     const ok = matchesOrigin(origin);
     if (debug) console.log(`[CORS] ${origin} -> ${ok ? 'ALLOW' : 'BLOCK'}`);
-    // IMPORTANT: never throw — false omits CORS headers (browser blocks) instead of 500
     return cb(null, ok);
   },
   credentials: true,
@@ -74,8 +70,8 @@ const corsOptions: MyCorsOptions = {
   optionsSuccessStatus: 204,
 };
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use(cors.default(corsOptions)); // Apply CORS middleware
+app.options('*', cors.default(corsOptions)); // Preflight handling
 
 // ----- Parsers & logs -----
 app.use(cookieParser());

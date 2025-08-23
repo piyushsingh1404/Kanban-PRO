@@ -4,9 +4,9 @@ import jwt from 'jsonwebtoken';
 import { AuthedRequest } from '../middlewares/auth';
 
 const isProd = process.env.NODE_ENV === 'production';
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me'; // Replace with real secret in production
 
-// Demo user (keep in sync with seed)
+// Demo user (keep in sync with seed or database)
 const DEMO_USER = { id: 'demo', email: 'demo1@mail.com', name: 'Demo User' };
 
 export async function register(_req: AuthedRequest, res: Response) {
@@ -21,24 +21,28 @@ export async function login(req: AuthedRequest, res: Response) {
     return res.status(401).json({ message: 'Invalid credentials' });
   }
 
+  // Generate JWT Token
   const token = jwt.sign(
     { id: DEMO_USER.id, email: DEMO_USER.email, name: DEMO_USER.name },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
 
+  // Set cookie for auth
   res.cookie('token', token, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
+  // Send the user and token back
   return res.json({ ...DEMO_USER, token });
 }
 
 export async function logout(_req: AuthedRequest, res: Response) {
+  // Clear cookie after logout
   res.clearCookie('token', {
     httpOnly: true,
     secure: isProd,
