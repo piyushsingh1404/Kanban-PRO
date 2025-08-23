@@ -1,31 +1,34 @@
+// In server/src/server.ts
+
 import 'dotenv/config';
 import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 
 // ✅ single declaration — callable even without esModuleInterop
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const cors: (opts?: any) => RequestHandler = require('cors');
 
-import { connectDB } from './config/db';
+// Import routes
 import authRoutes from './routes/auth.routes';
 import boardsRoutes from './routes/boards.routes';
 import listsRoutes from './routes/lists.routes';
 import cardsRoutes from './routes/cards.routes';
 
+// Initialize express app
 const app = express();
 app.set('trust proxy', 1);
+
+// Health check route (always returns 200 OK to prevent Render loop)
 app.get('/', (_req, res) => res.status(200).send('OK'));
 app.get('/api/v1/health', (_req, res) => res.status(200).json({ ok: true }));
 
 // ----- CORS (allow Netlify / local) -----
-// ----- CORS (allow Netlify / local) -----
-// ----- CORS (allow Netlify / local) -----
-const RAW = process.env.CORS_ORIGIN ?? "";
-const allow: string[] = RAW.split(",").map(s => s.trim()).filter(Boolean);
+const RAW = process.env.CORS_ORIGIN ?? '';
+const allow: string[] = RAW.split(',').map(s => s.trim()).filter(Boolean);
 
 // Always include local dev origins (avoid dupes)
-for (const o of ["http://localhost:5173","http://localhost:5174"]) {
+for (const o of ['http://localhost:5173', 'http://localhost:5174']) {
   if (!allow.includes(o)) allow.push(o);
 }
 
@@ -40,13 +43,13 @@ type MyCorsOptions = {
   optionsSuccessStatus?: number;
 };
 
-const debug = process.env.CORS_DEBUG === "1";
+const debug = process.env.CORS_DEBUG === '1';
 
 // supports entries like "*.netlify.app"
 function matchesOrigin(origin: string): boolean {
   if (allow.includes(origin)) return true;
   for (const rule of allow) {
-    if (rule.startsWith("*.")) {
+    if (rule.startsWith('*.') || origin.endsWith(rule)) {
       const suffix = rule.slice(1); // ".netlify.app"
       if (origin.endsWith(suffix)) return true;
     }
@@ -57,33 +60,27 @@ function matchesOrigin(origin: string): boolean {
 const corsOptions: MyCorsOptions = {
   origin(origin: string | undefined, cb: OriginCb) {
     if (!origin) {
-      if (debug) console.log("[CORS] <no origin> -> ALLOW");
+      if (debug) console.log('[CORS] <no origin> -> ALLOW');
       return cb(null, true); // curl/native apps
     }
     const ok = matchesOrigin(origin);
-    if (debug) console.log(`[CORS] ${origin} -> ${ok ? "ALLOW" : "BLOCK"}`);
+    if (debug) console.log(`[CORS] ${origin} -> ${ok ? 'ALLOW' : 'BLOCK'}`);
     // IMPORTANT: never throw — false omits CORS headers (browser blocks) instead of 500
     return cb(null, ok);
   },
   credentials: true,
-  methods: ["GET","HEAD","PUT","PATCH","POST","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization","Cache-Control"],
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
-
-
-
+app.options('*', cors(corsOptions));
 
 // ----- Parsers & logs -----
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
-
-// ----- Health -----
-app.get('/api/v1/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
 // ----- Routes -----
 app.use('/api/v1/auth', authRoutes);
@@ -100,7 +97,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const message =
     status === 500 && process.env.NODE_ENV === 'production'
       ? 'Internal Server Error'
-      : (err?.message as string) || 'Internal Server Error';
+      : err?.message || 'Internal Server Error';
   res.status(status).json({ message });
 });
 
@@ -108,6 +105,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 const port = Number(process.env.PORT) || 8080;
 const server = app.listen(port, () => console.log(`[BOOT] API on :${port}`));
 
+// Handle port conflict (EADDRINUSE)
 server.on('error', (err: any) => {
   if (err?.code === 'EADDRINUSE') {
     console.error(`[BOOT] Port ${port} in use. Set PORT or stop the other process.`);
@@ -117,7 +115,24 @@ server.on('error', (err: any) => {
   process.exit(1);
 });
 
-// Connect to DB in background; don't block health checks
+// ----- Connect to DB (background) -----
+const connectDB = async () => {
+  try {
+    console.log('[DB] connecting…');
+    const uri = process.env.MONGODB_URI;
+    if (uri) {
+      await mongoose.connect(uri);
+      console.log('[DB] connected');
+    } else {
+      console.error('[DB] MONGODB_URI not provided');
+    }
+  } catch (error) {
+    console.error('[DB] Error while connecting:', error);
+    // Don't block health checks or server startup
+  }
+};
+
+// DB connection (in background to prevent blocking the server)
 connectDB().catch((e) => console.error('[DB] unexpected error:', e));
 
 export default app;
